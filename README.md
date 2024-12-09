@@ -7,5 +7,4 @@ Android TCP服务端的实现
 2. 收发数据
 
 ## 效果图
-![Server](./img/Server.jpg)
-![Client](./img/Client.jpg)
+![Server](./img/Server.jpg)![Client](./img/Client.png)
