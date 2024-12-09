@@ -32,7 +32,7 @@ public class TCPServer {
     private ScheduledFuture scheduledFuture;//定时任务
     private OnStatusChangeListener onStatusChangeListener;
 
-    private boolean isSend = false;//发送线程状态
+    private boolean timerWorking;//定时器工作状态
     private boolean isReceive = false;//接收线程状态
     private final int TimerPeriod = 500;//定时器周期ms
     private long timerLength;//定时器工作时间ms
@@ -57,39 +57,31 @@ public class TCPServer {
         this.onStatusChangeListener = listener;
     }
 
-    public void init() {
-        //定时线程，检查服务端运行状态、设置方向盘力效应
-        isSend = true;
-        scheduledFuture = AppExecutors.getInstance().scheduledWork().scheduleWithFixedDelay(() -> {
-            if (isSend) {
-                if (timerLength % 3000 == 0) {//每3秒
-                    checkServerSocket();//检查服务端运行状态
-                }
-                timerLength += TimerPeriod;//计时更新
-            }
-        }, 0, TimerPeriod, TimeUnit.MILLISECONDS);
-    }
-
     public void start() {
-        this.isSend = true;
-    }
-
-    public boolean isStart() {
-        return isSend;
+        //定时任务，检查服务端运行状态、设置方向盘力效应
+        timerWorking = true;
+        if (scheduledFuture == null) {
+            scheduledFuture = AppExecutors.getInstance().scheduledWork().scheduleWithFixedDelay(() -> {
+                if (timerWorking) {
+                    if (timerLength % 3000 == 0) {//每3秒
+                        checkServerSocket();//检查服务端运行状态
+                    }
+                    timerLength += TimerPeriod;//计时更新
+                }
+            }, 0, TimerPeriod, TimeUnit.MILLISECONDS);
+        }
     }
 
     public void stop() {
-        this.isSend = false;
-        this.isReceive = false;
-        onConnectError();
-    }
-
-    public void close() {
-        onStatusChangeListener = null;
+        //取消定时任务
+        timerWorking = false;
         if (scheduledFuture != null) {
-            scheduledFuture.cancel(true);//取消定时任务
+            scheduledFuture.cancel(true);
             scheduledFuture = null;
         }
+        //断开连接
+        isReceive = false;
+        onConnectError();
         try {
             if (serverSocket != null) {
                 serverSocket.close();
@@ -131,10 +123,8 @@ public class TCPServer {
                 //serverSocket.setReuseAddress(true);//关闭Socket时等待一会
                 //serverSocket.setSoTimeout(5*1000);//超时默认为0，无限等待
             }
-            //接收客户端数据
-            if (isSend && !isReceive) {
-                startTcpReceive();
-            }
+            //开始接收数据
+            startReceive();
         } catch (IOException e) {
             e.printStackTrace();
             LogUtil.d(TAG, "开启服务异常");
@@ -143,7 +133,9 @@ public class TCPServer {
     }
 
     //接收客户端数据
-    private void startTcpReceive() {
+    private void startReceive() {
+        if (isReceive)
+            return;
         isReceive = true;
         AppExecutors.getInstance().workThread().execute(() -> {
             try {

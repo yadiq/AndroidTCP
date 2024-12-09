@@ -10,6 +10,9 @@ import com.hqumath.tcp.databinding.ActivityMainBinding;
 import com.hqumath.tcp.utils.CommonUtil;
 import com.hqumath.tcp.utils.LogUtil;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 /**
  * ****************************************************************
  * 作    者: Created by gyd
@@ -63,7 +66,8 @@ public class MainActivity extends BaseActivity {
                 printLog(msg);
             }
         });
-        startServer();
+        //开启服务
+        binding.btnStartServer.performClick();
     }
 
     @Override
@@ -71,7 +75,6 @@ public class MainActivity extends BaseActivity {
         super.onDestroy();
         if (tcpServer != null) {
             tcpServer.stop();
-            tcpServer.close();
             tcpServer = null;
         }
         CommonUtil.killProgress();
@@ -83,7 +86,6 @@ public class MainActivity extends BaseActivity {
     //开启服务
     private void startServer() {
         if (tcpServer != null) {
-            tcpServer.init();
             tcpServer.start();
         }
         binding.tvStatus.setText("服务状态：已开启");
@@ -94,7 +96,6 @@ public class MainActivity extends BaseActivity {
     private void closeServer() {
         if (tcpServer != null) {
             tcpServer.stop();
-            tcpServer.close();
         }
         binding.tvStatus.setText("服务状态：未开启");
         printLog("服务端已关闭");
@@ -103,7 +104,10 @@ public class MainActivity extends BaseActivity {
     private void printLog(String msg) {
         LogUtil.d(msg);
         binding.getRoot().post(() -> {
-            binding.tvReceive.setText(msg);
+            //当前时间
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            String date = dateFormat.format(new Date());
+            binding.tvReceive.setText(date + "\n" + msg);
         });
     }
 }
